@@ -1,0 +1,51 @@
+on:
+  workflow_call:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: env
+      - uses: actions/checkout@v3
+      - run: |
+          cat README.md
+          ls -al .github/workflows/
+      - uses: ./.github/workflows/build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: dist/
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - id: tag
+        uses: anothrNick/github-tag-action@1.61.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+      - uses: actions/download-artifact@v3
+        with:
+          name: my-artifact
+          path: dist/
+      - run: gh release create ${{ steps.tag.outputs.new_tag }} --generate-notes dist/*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  deploy_to_development:
+    needs: release
+    uses: ./.github/workflows/gate_and_deploy.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      environment: development
+  deploy_to_production:
+    needs: [release, deploy_to_development]
+    uses: ./.github/workflows/gate_and_deploy.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      environment: production

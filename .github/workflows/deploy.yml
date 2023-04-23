@@ -1,0 +1,21 @@
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+      tag:
+        required: true
+        type: string
+jobs:
+  deploy:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: gh release download ${{ inputs.tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          echo deploy ${{ inputs.tag }} using ${{ inputs.runner }}
+          ls
+      - uses: ./.github/workflows/deploy

@@ -1,0 +1,24 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      tag:
+        required: true
+        type: string
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      runner: ${{ steps.runner.outputs.runner }}
+    steps:
+      - id: runner
+        run: echo "runner=${{ vars.RUNNER }}" >> "$GITHUB_OUTPUT"
+  deploy:
+    needs: [gate]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      runner: ${{ needs.gate.outputs.runner }}
+      tag: ${{ inputs.tag }}
